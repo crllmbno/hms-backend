@@ -1,10 +1,10 @@
 package hotel.management.hotel_management_system.controller;
 
-import hotel.management.hotel_management_system.Repository.RoomRepository;
 import hotel.management.hotel_management_system.model.Room;
+import hotel.management.hotel_management_system.Repository.RoomRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -16,8 +16,9 @@ public class RoomController {
 
     // CREATE
     @PostMapping
-    public Room addRoom(@RequestBody Room room) {
-        return roomRepository.save(room);
+    public ResponseEntity<Room> addRoom(@RequestBody Room room) {
+        Room saved = roomRepository.save(room);
+        return ResponseEntity.ok(saved);
     }
 
     // READ - All
@@ -28,20 +29,35 @@ public class RoomController {
 
     // READ - One
     @GetMapping("/{roomNo}")
-    public Room getRoom(@PathVariable String roomNo) {
-        return roomRepository.findById(roomNo).orElse(null);
+    public ResponseEntity<Room> getRoom(@PathVariable String roomNo) {
+        return roomRepository.findById(roomNo)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // UPDATE
     @PutMapping("/{roomNo}")
-    public Room updateRoom(@PathVariable String roomNo, @RequestBody Room updatedRoom) {
-        updatedRoom.setRoomNo(roomNo);
-        return roomRepository.save(updatedRoom);
+    public ResponseEntity<Room> updateRoom(@PathVariable String roomNo, @RequestBody Room updatedRoom) {
+        return roomRepository.findById(roomNo)
+                .map(room -> {
+                    room.setName(updatedRoom.getName());
+                    room.setContact(updatedRoom.getContact());
+                    room.setDate(updatedRoom.getDate());
+                    return ResponseEntity.ok(roomRepository.save(room));
+                })
+                .orElseGet(() -> {
+                    updatedRoom.setRoomNo(roomNo);
+                    return ResponseEntity.ok(roomRepository.save(updatedRoom));
+                });
     }
 
     // DELETE
     @DeleteMapping("/{roomNo}")
-    public void deleteRoom(@PathVariable String roomNo) {
+    public ResponseEntity<Void> deleteRoom(@PathVariable String roomNo) {
+        if (!roomRepository.existsById(roomNo)) {
+            return ResponseEntity.notFound().build();
+        }
         roomRepository.deleteById(roomNo);
+        return ResponseEntity.noContent().build();
     }
 }
